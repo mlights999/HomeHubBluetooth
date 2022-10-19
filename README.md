@@ -1,35 +1,32 @@
 # HomeHub
 
-A Particle project named HomeHub
+Project created for Particle Gen 3 (Argon, Boron, Xenon) for controlling Kasa smart light bulbs with proximity detection using Bluetooth LE.
 
-## Welcome to your project!
+## Project Features
 
-Every new Particle project is composed of 3 important elements that you'll see have been created in your project directory for HomeHub.
+- Support for controlling TP-Link Kasa smart bulbs/plugs over a LAN
+- Automatic control of TP-Link Kasa bulbs/plugs using Bluetooth proximity scanning
+- Automatic-on at sunset with phone proximity
+- Control TP-Link Kasa bulbs/plugs with a Siri shortcut (using webhooks)
+- Quick control of brightness and color temperature using joystick
+- Quick on/off setting of lights using integrated button
 
-#### ```/src``` folder:  
-This is the source folder that contains the firmware files for your project. It should *not* be renamed. 
-Anything that is in this folder when you compile your project will be sent to our compile service and compiled into a firmware binary for the Particle device that you have targeted.
+#### Background:  
+Using Bluetooth Low Energy (BLE), Particle Gen 3 devices can scan for local BLE devices periodically and examine their advertising data. Apple's devices (specifically iPhones, Apple Watches, and iPads) periodically advertise as part of their "Continuity" platform. In examining the advertising data of my own devices (iPhone 12, Apple Watch Series 5), I was able to find a set of bytes in the advertising data that are static and unique to those specific devices. Using this, I can measure the signal strength of the BLE broadcast.
 
-If your application contains multiple files, they should all be included in the `src` folder. If your firmware depends on Particle libraries, those dependencies are specified in the `project.properties` file referenced below.
+Automatic control of the lights is based on the presence of BLE peripherals and is configured to turn on/off lights based on when my devices (based on the static bytes) are present. The Particle device periodically scans and looks for Apple devices (identifiable by the manufacturer ID 21a0102), then checks if that devices static custom data bytes match the ones for my phone. You can find these bytes by putting the phone really close to the Particle device and see which bytes stay constant over time (usually there is scrambling of the other bytes every few minutes). Once you find those bytes, the Particle device can determine if it has scanned your phone. I've found that two bytes are constant, so there should be 2^16 unique Apple device keys. With this you can filter out devices you don't want affecting the control algorithm
 
-#### ```.ino``` file:
-This file is the firmware that will run as the primary application on your Particle device. It contains a `setup()` and `loop()` function, and can be written in Wiring or C/C++. For more information about using the Particle firmware API to create firmware for your Particle device, refer to the [Firmware Reference](https://docs.particle.io/reference/firmware/) section of the Particle documentation.
+#### Automatic Control Method:
 
-#### ```project.properties``` file:  
-This is the file that specifies the name and version number of the libraries that your project depends on. Dependencies are added automatically to your `project.properties` file when you add a library to a project using the `particle library add` command in the CLI or add a library in the Desktop IDE.
+- Scan for devices periodically that match the dictionary of "my devices" (based on the static bytes)
+- If a known device is found and the lights are on, keep them on.
+- If a known device was just found and the lights are off, check the ambient light sensor (ALS):
+    - If a manual trigger set the lights off, then leave them off until the device leaves for 10 minutes and comes back
+    - If the ALS is "dark", turn on the lights
+    - If the ALS is "light", leave them off (saves electricity)
+    - Update the timer for when a device was last discovered
+- If the lights are on, check when a known device was last discovered:
+    - If it's been 3 minutes and we aren't under manual control, turn off the lights
+    - If we're under manual control, do nothing
+    
 
-## Adding additional files to your project
-
-#### Projects with multiple sources
-If you would like add additional files to your application, they should be added to the `/src` folder. All files in the `/src` folder will be sent to the Particle Cloud to produce a compiled binary.
-
-#### Projects with external libraries
-If your project includes a library that has not been registered in the Particle libraries system, you should create a new folder named `/lib/<libraryname>/src` under `/<project dir>` and add the `.h`, `.cpp` & `library.properties` files for your library there. Read the [Firmware Libraries guide](https://docs.particle.io/guide/tools-and-features/libraries/) for more details on how to develop libraries. Note that all contents of the `/lib` folder and subfolders will also be sent to the Cloud for compilation.
-
-## Compiling your project
-
-When you're ready to compile your project, make sure you have the correct Particle device target selected and run `particle compile <platform>` in the CLI or click the Compile button in the Desktop IDE. The following files in your project folder will be sent to the compile service:
-
-- Everything in the `/src` folder, including your `.ino` application file
-- The `project.properties` file for your project
-- Any libraries stored under `lib/<libraryname>/src`
