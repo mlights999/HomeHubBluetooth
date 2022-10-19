@@ -1,4 +1,4 @@
-# HomeHub
+# HomeHub MK1
 
 Project created for Particle Gen 3 (Argon, Boron, Xenon) for controlling Kasa smart light bulbs with proximity detection using Bluetooth LE.
 
